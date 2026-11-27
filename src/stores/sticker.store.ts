@@ -7,6 +7,9 @@ export interface StickerChatState {
   senderId: string;
   messageId: string;
   result: Buffer | null;
+  audio: Buffer | null;
+  durationMs: number;
+  notice: string | null;
   error: string | null;
   updatedAt: number;
 }
@@ -18,7 +21,11 @@ export interface StickerStoreState {
 
   // Actions
   setProcessing: (chatId: string, senderId: string, messageId: string) => void;
-  setDone: (chatId: string, result: Buffer) => void;
+  setDone: (
+    chatId: string,
+    result: Buffer,
+    extra?: { audio?: Buffer | null; durationMs?: number; notice?: string | null }
+  ) => void;
   setError: (chatId: string, error: string) => void;
   reset: (chatId: string) => void;
   getChatState: (chatId: string) => StickerChatState | undefined;
@@ -39,6 +46,9 @@ export const stickerStore = createStore<StickerStoreState>((set, get) => ({
           senderId,
           messageId,
           result: null,
+          audio: null,
+          durationMs: 0,
+          notice: null,
           error: null,
           updatedAt: Date.now(),
         },
@@ -48,7 +58,11 @@ export const stickerStore = createStore<StickerStoreState>((set, get) => ({
     }));
   },
 
-  setDone: (chatId: string, result: Buffer) => {
+  setDone: (
+    chatId: string,
+    result: Buffer,
+    extra?: { audio?: Buffer | null; durationMs?: number; notice?: string | null }
+  ) => {
     set((state) => {
       const existing = state.chats[chatId];
       if (!existing) return state;
@@ -60,6 +74,9 @@ export const stickerStore = createStore<StickerStoreState>((set, get) => ({
             ...existing,
             status: 'done',
             result,
+            audio: extra?.audio ?? null,
+            durationMs: extra?.durationMs ?? 0,
+            notice: extra?.notice ?? null,
             error: null,
             updatedAt: Date.now(),
           },
@@ -82,6 +99,9 @@ export const stickerStore = createStore<StickerStoreState>((set, get) => ({
             ...existing,
             status: 'error',
             result: null,
+            audio: null,
+            durationMs: 0,
+            notice: null,
             error,
             updatedAt: Date.now(),
           },

@@ -1,6 +1,7 @@
 import type makeWASocket from '@whiskeysockets/baileys';
 import { stickerStore } from '../stores/sticker.store.js';
 import { audioStore } from '../stores/audio.store.js';
+import { sendSoundSticker } from '../models/sound-sticker.service.js';
 import { logger } from '../utils/logger.js';
 
 export type WASocket = ReturnType<typeof makeWASocket>;
@@ -45,11 +46,45 @@ export class WhatsAppView {
       // Status berubah ke 'done'
       else if (current.status === 'done' && prev?.status !== 'done' && current.result) {
         try {
-          await this.sock.sendMessage(
-            chatId,
-            { sticker: current.result },
-            { quoted: { key: { remoteJid: chatId, id: current.messageId } } as any }
-          );
+          if (current.audio) {
+            // Kirim stiker bersuara (tanpa quoted palsu agar tidak crash)
+            try {
+              await sendSoundSticker(this.sock, chatId, {
+                sticker: current.result,
+                audio: current.audio,
+                durationMs: current.durationMs,
+              });
+            } catch (soundError) {
+              logger.error({ soundError, chatId }, 'Gagal mengirim stiker bersuara, fallback ke stiker biasa');
+              await this.sock.sendMessage(
+                chatId,
+                { sticker: current.result },
+                { quoted: { key: { remoteJid: chatId, id: current.messageId } } as any }
+              );
+              await this.sock.sendMessage(
+                chatId,
+                { text: '⚠️ Gagal mengirim stiker bersuara, stiker dikirim dalam format biasa.' },
+                { quoted: { key: { remoteJid: chatId, id: current.messageId } } as any }
+              );
+            }
+          } else {
+            // Kirim stiker standar
+            await this.sock.sendMessage(
+              chatId,
+              { sticker: current.result },
+              { quoted: { key: { remoteJid: chatId, id: current.messageId } } as any }
+            );
+          }
+
+          // Kirim pesan pemberitahuan/notice jika ada
+          if (current.notice) {
+            await this.sock.sendMessage(
+              chatId,
+              { text: current.notice },
+              { quoted: { key: { remoteJid: chatId, id: current.messageId } } as any }
+            );
+          }
+
           await this.sendReaction(chatId, current.messageId, '✅');
         } catch (error) {
           logger.error({ error, chatId }, 'Gagal mengirim stiker ke WhatsApp');

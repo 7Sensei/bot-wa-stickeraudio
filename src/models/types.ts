@@ -6,6 +6,13 @@ export interface StickerOptions {
   categories?: string[];
 }
 
+export interface SoundStickerResult {
+  sticker: Buffer;
+  audio: Buffer | null;
+  durationMs: number;
+  hasAudio: boolean;
+}
+
 export interface MediaJob {
   id: string;
   chatId: string;

@@ -13,7 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
     "dotenv": "^18.0.10",
     "fluent-ffmpeg": "^2.1.3",
     "node-webpmux": "^3.2.1",

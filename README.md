@@ -1,6 +1,6 @@
 # Bot WhatsApp Stiker & Audio (Termux ARM)
 
-Bot WhatsApp otomatis untuk pembuatan stiker (gambar, video, GIF) dan konversi audio (video ke MP3, audio ke Voice Note WhatsApp). Didesain khusus menggunakan pola arsitektur **MVVM** (Model-View-ViewModel) dan state management **Zustand Vanilla**, dioptimalkan agar berjalan stabil di HP Android melalui **Termux** dengan RAM dan CPU terbatas.
+Bot WhatsApp otomatis untuk pembuatan stiker (gambar, video, GIF, dan stiker bersuara) serta konversi audio (video ke MP3, audio ke Voice Note WhatsApp). Didesain khusus menggunakan pola arsitektur **MVVM** (Model-View-ViewModel) dan state management **Zustand Vanilla**, dioptimalkan agar berjalan stabil di HP Android melalui **Termux** dengan RAM dan CPU terbatas.
 
 ---
 
@@ -10,6 +10,11 @@ Bot WhatsApp otomatis untuk pembuatan stiker (gambar, video, GIF) dan konversi a
   - Konversi gambar (JPG, PNG) menjadi stiker WebP 512x512 dengan padding transparan proporsional.
   - Konversi video / GIF menjadi stiker animasi WebP (maksimal 10 detik, frame rate dioptimasi agar ukuran selalu `< 1MB` sesuai standar WhatsApp).
   - Kustomisasi metadata stiker (Pack Name & Author) langsung lewat perintah, contoh: `.s Kucing Lucu | By Sensei`.
+- 🔊 **Stiker Bersuara / Sound Sticker (`.som` / `.ss`)**:
+  - Mengubah video/GIF yang memiliki audio menjadi stiker animasi WhatsApp yang dapat mengeluarkan suara saat diketuk.
+  - Menggunakan kompresi adaptif agar ukuran WebP stiker tetap di bawah **500 KB** dan audio Ogg Opus di bawah **256 KB**.
+  - Mendukung kustomisasi pack & author: `.som PackName | AuthorName`.
+  - **Mekanisme Fallback Otomatis**: Jika video tidak memiliki stream suara, audionya senyap, atau pengiriman stiker bersuara gagal, bot secara otomatis mengirimkannya sebagai stiker animasi biasa disertai pemberitahuan ramah.
 - 🎵 **Ekstraksi MP3 (`.audio`)**:
   - Ekstrak suara dari video menjadi file audio MP3 berkualitas jernih.
 - 🎙️ **Voice Note WhatsApp (`.vn`)**:
@@ -22,6 +27,16 @@ Bot WhatsApp otomatis untuk pembuatan stiker (gambar, video, GIF) dan konversi a
   - Semua file sementara di folder `temp/` langsung dihapus setelah konversi selesai.
 - 🔑 **Login Kode Pairing**:
   - Tidak perlu scan QR code dari HP lain; cukup gunakan 8 digit kode pairing langsung dari aplikasi WhatsApp.
+
+---
+
+## ⚠️ Peringatan Penting Mengenai Fitur Stiker Bersuara
+
+> [!WARNING]
+> **Format Eksperimental & Hasil Rekayasa Balik (Reverse Engineering)**:
+> Struktur stiker bersuara dibentuk dengan menyematkan pesan audio ke dalam pembungkus `FutureProofMessage` (field 134) yang tidak didukung secara resmi di SDK Baileys standar.
+> - Format ini dapat sewaktu-waktu berhenti bekerja apabila WhatsApp memperbarui protokol atau aplikasi klien resminya.
+> - Penggunaan fitur tidak resmi ini membawa risiko peninjauan atau pembatasan nomor oleh pihak WhatsApp. Gunakan secara bijak dan wajar pada nomor pribadi/uji coba.
 
 ---
 
@@ -125,8 +140,10 @@ npm start
 
 | Perintah | Deskripsi | Contoh Penggunaan |
 |---|---|---|
-| `.s` / `.stiker` | Mengubah gambar/video/GIF menjadi stiker | Kirim gambar dengan caption `.s` atau balas gambar dengan `.s` |
+| `.s` / `.stiker` | Mengubah gambar/video/GIF menjadi stiker biasa | Kirim gambar dengan caption `.s` atau balas gambar dengan `.s` |
 | `.s Pack \| Author` | Stiker dengan nama pack & pembuat kustom | `.s Stiker Lucu \| Mas Sensei` |
+| `.som` / `.ss` | Mengubah video menjadi **stiker bersuara** | Balas video dengan `.som` atau `.ss` |
+| `.som Pack \| Author` | Stiker bersuara dengan pack & author kustom | `.som Lucu Banget \| Mas Sensei` |
 | `.audio` | Mengekstrak suara dari video menjadi MP3 | Balas pesan video dengan `.audio` |
 | `.vn` | Mengubah audio/video menjadi Voice Note WhatsApp | Balas pesan audio dengan `.vn` |
 | `.menu` | Menampilkan panduan dan daftar perintah | Ketik `.menu` di obrolan |
@@ -138,3 +155,10 @@ npm start
 - `npm run dev`: Menjalankan bot dengan fitur auto-reload (`tsx watch`).
 - `npm start`: Menjalankan bot dalam mode produksi.
 - `npm run typecheck`: Memverifikasi seluruh tipe TypeScript tanpa kompilasi file (`tsc --noEmit`).
+
+---
+
+## 📄 Lisensi & Kredit
+
+- Kode bot WhatsApp ini dirilis di bawah lisensi **MIT**.
+- Fitur stiker bersuara (Sound Sticker wrapper, sidecar encoder, dan struktur protobuf) diadaptasi dari proyek sumber terbuka [coelhobugado/whatsapp-figurinhas-com-som](https://github.com/coelhobugado/whatsapp-figurinhas-com-som) yang dirilis di bawah lisensi MIT.

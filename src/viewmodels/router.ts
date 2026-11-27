@@ -24,6 +24,10 @@ export class CommandRouter {
       `    Ubah gambar/video/GIF jadi stiker.\n` +
       `    _Bisa tambah pack & author:_\n` +
       `    \`${p}s Nama Pack | Nama Pembuat\`\n\n` +
+      `  • *${p}som* atau *${p}ss*\n` +
+      `    Ubah video jadi stiker bersuara (sound sticker).\n` +
+      `    _Bisa tambah pack & author:_\n` +
+      `    \`${p}som Nama Pack | Nama Pembuat\`\n\n` +
       `  • *${p}audio*\n` +
       `    Ekstrak audio dari video menjadi file MP3.\n\n` +
       `  • *${p}vn*\n` +
@@ -34,6 +38,7 @@ export class CommandRouter {
       `  • Gambar: Maksimal ${config.maxImageSizeMB}MB\n` +
       `  • Video: Maksimal ${config.maxVideoSizeMB}MB\n` +
       `  • Durasi stiker animasi: Maksimal ${config.maxStickerVideoDurationSec} detik\n` +
+      `  • Stiker bersuara: Maksimal 500 KB (WebP) & 256 KB (Audio Opus)\n` +
       `  • Antrean: 1 media pada satu waktu agar HP tetap hemat RAM & adem.`
     );
   }
@@ -66,6 +71,12 @@ export class CommandRouter {
         case 'stiker':
         case 'sticker':
           await stickerViewModel.handleSticker(context);
+          return { handled: true };
+
+        case 'som':
+        case 'ss':
+        case 'soundsticker':
+          await stickerViewModel.handleSoundSticker(context);
           return { handled: true };
 
         case 'audio':
