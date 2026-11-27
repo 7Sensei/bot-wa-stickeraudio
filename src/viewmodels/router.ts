@@ -103,7 +103,7 @@ export class CommandRouter {
           return { handled: false };
       }
     } catch (error) {
-      logger.error({ error, command }, 'Error saat mengeksekusi routing perintah');
+      logger.error({ err: error, command }, 'Error saat mengeksekusi routing perintah');
       return { handled: false };
     }
   }

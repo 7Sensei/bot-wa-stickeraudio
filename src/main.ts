@@ -1,13 +1,13 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  type WAMessage,
 } from '@whiskeysockets/baileys';
 import readline from 'readline';
 import pino from 'pino';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { ensureTempDir, cleanupTempDir } from './utils/temp-file.js';
+import { ensureFfmpegInstallation } from './utils/ffmpeg-check.js';
 import { extractMessageText, extractMediaInfo, type ParsedCommand } from './utils/message-extractor.js';
 import { commandRouter } from './viewmodels/router.js';
 import { whatsAppView } from './views/whatsapp.view.js';
@@ -30,6 +30,8 @@ async function promptPhoneNumber(): Promise<string> {
  */
 async function startBot(): Promise<void> {
   logger.info('Memulai bot WhatsApp...');
+  // Periksa dependensi ffmpeg sebelum membuat koneksi socket
+  await ensureFfmpegInstallation();
   await ensureTempDir();
   await cleanupTempDir();
 
@@ -82,7 +84,7 @@ async function startBot(): Promise<void> {
         console.log(`4. Masukkan kode di atas: ${code}`);
         console.log('======================================================\n');
       } catch (error) {
-        logger.error({ error }, 'Gagal meminta kode pairing dari WhatsApp');
+        logger.error({ err: error }, 'Gagal meminta kode pairing dari WhatsApp');
       }
     }, 3000);
   }
@@ -130,6 +132,9 @@ async function startBot(): Promise<void> {
           continue;
         }
 
+        // Ingat pesan asli di View untuk dijadikan balasan (quoted)
+        whatsAppView.rememberMessage(msg);
+
         const chatId = msg.key.remoteJid || '';
         const senderId = msg.key.participant || msg.key.remoteJid || '';
         const messageId = msg.key.id || '';
@@ -153,7 +158,7 @@ async function startBot(): Promise<void> {
           await whatsAppView.sendMenu(chatId, result.menuText, messageId);
         }
       } catch (error) {
-        logger.error({ error, msgId: msg.key.id }, 'Error saat menangani pesan masuk');
+        logger.error({ err: error, msgId: msg.key.id }, 'Error saat menangani pesan masuk');
       }
     }
   });

@@ -71,7 +71,7 @@ export class AudioViewModel {
         audioStore.getState().setDone(chatId, resultBuffer);
         logger.info({ chatId, isVoiceNote }, 'Berhasil memproses audio');
       } catch (error: any) {
-        logger.error({ error, chatId }, 'Gagal memproses konversi audio');
+        logger.error({ err: error, chatId }, 'Gagal memproses konversi audio');
         audioStore.getState().setError(
           chatId,
           '❌ Terjadi kesalahan saat memproses audio. Pastikan file media tidak rusak.'

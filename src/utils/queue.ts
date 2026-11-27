@@ -42,7 +42,7 @@ class MediaQueue {
       try {
         await nextTask();
       } catch (error) {
-        logger.error({ error }, 'Error saat menjalankan tugas dalam antrean');
+        logger.error({ err: error }, 'Error saat menjalankan tugas dalam antrean');
       } finally {
         this.isProcessing = false;
         // Jalankan tugas berikutnya jika ada

@@ -156,7 +156,6 @@ export async function imageToSticker(
           '-qscale', '75',
           '-preset', 'default',
           '-an',
-          '-vsync', '0',
         ])
         .output(outputPath)
         .on('end', () => resolve())
@@ -174,7 +173,7 @@ export async function imageToSticker(
 
     return finalBuffer;
   } catch (error) {
-    logger.error({ error }, 'Gagal mengonversi gambar ke stiker');
+    logger.error({ err: error }, 'Gagal mengonversi gambar ke stiker');
     throw error;
   } finally {
     if (needDeleteInput) await deleteTempFile(inputPath);
@@ -215,7 +214,6 @@ export async function videoToSticker(
           '-qscale', '45',
           '-preset', 'default',
           '-an',
-          '-vsync', '0',
         ])
         .output(outputPath)
         .on('end', () => resolve())
@@ -239,7 +237,7 @@ export async function videoToSticker(
 
     return finalBuffer;
   } catch (error) {
-    logger.error({ error }, 'Gagal mengonversi video ke stiker animasi');
+    logger.error({ err: error }, 'Gagal mengonversi video ke stiker animasi');
     throw error;
   } finally {
     if (needDeleteInput) await deleteTempFile(inputPath);
@@ -309,7 +307,6 @@ export async function videoToSoundSticker(
               '-qscale', String(step.qscale),
               '-preset', 'default',
               '-an',
-              '-vsync', '0',
             ])
             .output(outputPath)
             .on('end', () => resolve())
@@ -361,7 +358,7 @@ export async function videoToSoundSticker(
       hasAudio,
     };
   } catch (error) {
-    logger.error({ error }, 'Gagal memproses video ke stiker bersuara');
+    logger.error({ err: error }, 'Gagal memproses video ke stiker bersuara');
     throw error;
   } finally {
     if (needDeleteInput) await deleteTempFile(inputPath);

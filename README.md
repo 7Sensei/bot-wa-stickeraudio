@@ -150,6 +150,32 @@ npm start
 
 ---
 
+## 🛠️ Pemecahan Masalah
+
+### "Unrecognized option vsync"
+Versi ffmpeg terbaru menolak opsi `-vsync`. Bug ini **sudah diperbaiki** di versi bot ini — opsi tersebut telah dihapus dari semua perintah konversi stiker.
+
+### Memeriksa Encoder FFmpeg di Termux
+Pastikan encoder yang dibutuhkan tersedia:
+```bash
+ffmpeg -encoders | grep -E 'libwebp|libopus|libmp3lame'
+```
+Jika kosong atau ada yang kurang, install ulang FFmpeg:
+```bash
+pkg install ffmpeg libwebp -y
+```
+Bot juga akan memeriksa encoder ini secara otomatis saat startup dan menampilkan pesan error yang jelas jika ada yang kurang.
+
+### TypeScript dan `npm run typecheck`
+TypeScript 7.x menggunakan binary native yang tidak tersedia untuk Android ARM64 (Termux). Proyek ini sudah menggunakan TypeScript 5.x yang kompatibel dengan Termux. Jalankan `npm run typecheck` di PC/laptop atau di Termux dengan TypeScript 5.x.
+
+### Bot Tidak Merespons Perintah
+1. Pastikan nomor di `.env` benar (format: `628xxx`, tanpa `+` atau spasi).
+2. Periksa apakah ada pesan error encoder di log startup.
+3. Cek log dengan `npm start` atau `pm2 logs bot-wa`.
+
+---
+
 ## 🛠️ Skrip Pengembangan
 
 - `npm run dev`: Menjalankan bot dengan fitur auto-reload (`tsx watch`).

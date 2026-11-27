@@ -52,7 +52,7 @@ export async function videoToMp3(input: Buffer | string): Promise<Buffer> {
 
     return await fs.readFile(outputPath);
   } catch (error) {
-    logger.error({ error }, 'Gagal mengonversi video ke MP3');
+    logger.error({ err: error }, 'Gagal mengonversi video ke MP3');
     throw error;
   } finally {
     if (needDeleteInput) await deleteTempFile(inputPath);
@@ -95,7 +95,7 @@ export async function audioToVoiceNote(input: Buffer | string): Promise<Buffer> 
 
     return await fs.readFile(outputPath);
   } catch (error) {
-    logger.error({ error }, 'Gagal mengonversi audio ke Voice Note');
+    logger.error({ err: error }, 'Gagal mengonversi audio ke Voice Note');
     throw error;
   } finally {
     if (needDeleteInput) await deleteTempFile(inputPath);

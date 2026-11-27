@@ -93,7 +93,7 @@ export class StickerViewModel {
         stickerStore.getState().setDone(chatId, resultBuffer);
         logger.info({ chatId }, 'Berhasil membuat stiker');
       } catch (error: any) {
-        logger.error({ error, chatId }, 'Gagal memproses stiker');
+        logger.error({ err: error, chatId }, 'Gagal memproses stiker');
 
         let friendlyMsg = '❌ Terjadi kesalahan saat membuat stiker. Pastikan format media valid dan coba lagi.';
         if (error?.message?.includes('melebihi batas 1MB')) {
@@ -207,7 +207,7 @@ export class StickerViewModel {
           });
         }
       } catch (error: any) {
-        logger.error({ error, chatId }, 'Gagal memproses stiker bersuara');
+        logger.error({ err: error, chatId }, 'Gagal memproses stiker bersuara');
 
         let friendlyMsg = '❌ Terjadi kesalahan saat membuat stiker bersuara. Pastikan format media valid dan coba lagi.';
         if (error?.message?.includes('500 KB') || error?.message?.includes('1MB')) {
