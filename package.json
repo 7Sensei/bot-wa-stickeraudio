@@ -1,0 +1,30 @@
+{
+  "name": "bot-wa-stickeraudio",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot Stiker & Audio (Baileys, MVVM, Zustand vanilla) untuk Termux",
+  "type": "module",
+  "main": "src/main.ts",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["whatsapp-bot", "baileys", "termux", "ffmpeg", "sticker", "audio"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "dotenv": "^18.0.10",
+    "fluent-ffmpeg": "^2.1.3",
+    "node-webpmux": "^3.2.1",
+    "pino": "^10.4.0",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/node": "^26.6.11",
+    "pino-pretty": "^13.2.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
