@@ -34,6 +34,8 @@ export class CommandRouter {
       `    Ubah audio/video menjadi Voice Note (PTT) WhatsApp.\n\n` +
       `  • *${p}menu*\n` +
       `    Menampilkan pesan menu bantuan ini.\n\n` +
+      `  • *${p}id*\n` +
+      `    Menampilkan ID chat ini (berguna untuk mengisi ALLOWED_CHATS di .env).\n\n` +
       `⚙️ *Batasan Media:*\n` +
       `  • Gambar: Maksimal ${config.maxImageSizeMB}MB\n` +
       `  • Video: Maksimal ${config.maxVideoSizeMB}MB\n` +
@@ -97,6 +99,13 @@ export class CommandRouter {
             handled: true,
             isMenu: true,
             menuText: this.getMenuText(),
+          };
+
+        case 'id':
+          return {
+            handled: true,
+            isMenu: true,
+            menuText: `🆔 *ID chat ini:*\n\`${context.chatId}\`\n\n_Salin ID di atas lalu tambahkan ke variabel ALLOWED_CHATS di file .env._`,
           };
 
         default:

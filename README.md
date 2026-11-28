@@ -147,6 +147,13 @@ npm start
 | `.audio` | Mengekstrak suara dari video menjadi MP3 | Balas pesan video dengan `.audio` |
 | `.vn` | Mengubah audio/video menjadi Voice Note WhatsApp | Balas pesan audio dengan `.vn` |
 | `.menu` | Menampilkan panduan dan daftar perintah | Ketik `.menu` di obrolan |
+| `.id` | Menampilkan ID chat ini (untuk ALLOWED_CHATS) | Ketik `.id` di obrolan |
+
+---
+
+## 🔒 Membatasi Akses Bot (ALLOWED_CHATS)
+
+Variabel `ALLOWED_CHATS` di `.env` membatasi bot hanya merespons chat/grup tertentu. Isi dengan JID chat dipisah koma — kosongkan untuk mengizinkan semua chat. Gunakan perintah `.id` di WhatsApp untuk mendapatkan ID chat yang ingin ditambahkan. Perintah `.id` selalu bisa digunakan dari mana saja meskipun chat tersebut belum ada di daftar.
 
 ---
 

@@ -16,6 +16,12 @@ export interface BotConfig {
   authDir: string;
   tempDir: string;
   logLevel: string;
+  /**
+   * Daftar JID chat yang diizinkan menggunakan bot.
+   * Kosong = semua chat diizinkan. Isi dari env ALLOWED_CHATS (pisah koma).
+   * Contoh: "6281234567890@s.whatsapp.net,120363000000000000@g.us"
+   */
+  allowedChats: string[];
 }
 
 export const config: BotConfig = {
@@ -30,4 +36,8 @@ export const config: BotConfig = {
   authDir: path.resolve(process.cwd(), process.env.AUTH_DIR || 'auth'),
   tempDir: path.resolve(process.cwd(), process.env.TEMP_DIR || 'temp'),
   logLevel: process.env.LOG_LEVEL || 'info',
+  allowedChats: (process.env.ALLOWED_CHATS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
 };

@@ -132,12 +132,22 @@ async function startBot(): Promise<void> {
           continue;
         }
 
-        // Ingat pesan asli di View untuk dijadikan balasan (quoted)
-        whatsAppView.rememberMessage(msg);
-
         const chatId = msg.key.remoteJid || '';
         const senderId = msg.key.participant || msg.key.remoteJid || '';
         const messageId = msg.key.id || '';
+
+        // Deteksi perintah (tanpa prefix) untuk keperluan filter whitelist
+        const rawCommand = rawText.slice(config.prefix.length).trim().split(/\s+/)[0]?.toLowerCase() || '';
+
+        // Filter whitelist chat: jika ALLOWED_CHATS diisi dan chatId tidak ada di daftar,
+        // abaikan pesan secara diam-diam — kecuali perintah .id (selalu diizinkan)
+        if (config.allowedChats.length > 0 && rawCommand !== 'id' && !config.allowedChats.includes(chatId)) {
+          logger.debug({ chatId, rawCommand }, 'Pesan dari chat tidak terotorisasi, diabaikan');
+          continue;
+        }
+
+        // Ingat pesan asli di View untuk dijadikan balasan (quoted)
+        whatsAppView.rememberMessage(msg);
         const media = extractMediaInfo(msg);
 
         const context: ParsedCommand = {
