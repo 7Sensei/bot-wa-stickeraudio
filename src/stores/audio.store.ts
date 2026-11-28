@@ -1,7 +1,11 @@
 import { createStore } from 'zustand/vanilla';
 import type { JobStatus } from '../models/types.js';
 
-export interface AudioChatState {
+/**
+ * State per job audio, dikunci oleh messageId (id pesan perintah).
+ * Menyimpan chatId agar View bisa mengirim balasan ke chat yang benar.
+ */
+export interface AudioJobState {
   status: JobStatus;
   chatId: string;
   senderId: string;
@@ -13,28 +17,27 @@ export interface AudioChatState {
 }
 
 export interface AudioStoreState {
-  chats: Record<string, AudioChatState>;
-  lastUpdatedChatId: string | null;
-  queue: string[];
+  /** Kunci: messageId (id pesan perintah), bukan chatId */
+  jobs: Record<string, AudioJobState>;
+  lastUpdatedMessageId: string | null;
 
   // Actions
   setProcessing: (chatId: string, senderId: string, messageId: string, isVoiceNote: boolean) => void;
-  setDone: (chatId: string, result: Buffer) => void;
-  setError: (chatId: string, error: string) => void;
-  reset: (chatId: string) => void;
-  getChatState: (chatId: string) => AudioChatState | undefined;
+  setDone: (messageId: string, result: Buffer) => void;
+  setError: (messageId: string, error: string) => void;
+  reset: (messageId: string) => void;
+  getJobState: (messageId: string) => AudioJobState | undefined;
 }
 
 export const audioStore = createStore<AudioStoreState>((set, get) => ({
-  chats: {},
-  lastUpdatedChatId: null,
-  queue: [],
+  jobs: {},
+  lastUpdatedMessageId: null,
 
   setProcessing: (chatId: string, senderId: string, messageId: string, isVoiceNote: boolean) => {
     set((state) => ({
-      chats: {
-        ...state.chats,
-        [chatId]: {
+      jobs: {
+        ...state.jobs,
+        [messageId]: {
           status: 'processing',
           chatId,
           senderId,
@@ -45,20 +48,19 @@ export const audioStore = createStore<AudioStoreState>((set, get) => ({
           updatedAt: Date.now(),
         },
       },
-      lastUpdatedChatId: chatId,
-      queue: state.queue.includes(chatId) ? state.queue : [...state.queue, chatId],
+      lastUpdatedMessageId: messageId,
     }));
   },
 
-  setDone: (chatId: string, result: Buffer) => {
+  setDone: (messageId: string, result: Buffer) => {
     set((state) => {
-      const existing = state.chats[chatId];
+      const existing = state.jobs[messageId];
       if (!existing) return state;
 
       return {
-        chats: {
-          ...state.chats,
-          [chatId]: {
+        jobs: {
+          ...state.jobs,
+          [messageId]: {
             ...existing,
             status: 'done',
             result,
@@ -66,21 +68,20 @@ export const audioStore = createStore<AudioStoreState>((set, get) => ({
             updatedAt: Date.now(),
           },
         },
-        lastUpdatedChatId: chatId,
-        queue: state.queue.filter((id) => id !== chatId),
+        lastUpdatedMessageId: messageId,
       };
     });
   },
 
-  setError: (chatId: string, error: string) => {
+  setError: (messageId: string, error: string) => {
     set((state) => {
-      const existing = state.chats[chatId];
+      const existing = state.jobs[messageId];
       if (!existing) return state;
 
       return {
-        chats: {
-          ...state.chats,
-          [chatId]: {
+        jobs: {
+          ...state.jobs,
+          [messageId]: {
             ...existing,
             status: 'error',
             result: null,
@@ -88,25 +89,23 @@ export const audioStore = createStore<AudioStoreState>((set, get) => ({
             updatedAt: Date.now(),
           },
         },
-        lastUpdatedChatId: chatId,
-        queue: state.queue.filter((id) => id !== chatId),
+        lastUpdatedMessageId: messageId,
       };
     });
   },
 
-  reset: (chatId: string) => {
+  reset: (messageId: string) => {
     set((state) => {
-      const newChats = { ...state.chats };
-      delete newChats[chatId];
+      const newJobs = { ...state.jobs };
+      delete newJobs[messageId];
       return {
-        chats: newChats,
-        lastUpdatedChatId: chatId,
-        queue: state.queue.filter((id) => id !== chatId),
+        jobs: newJobs,
+        lastUpdatedMessageId: messageId,
       };
     });
   },
 
-  getChatState: (chatId: string) => {
-    return get().chats[chatId];
+  getJobState: (messageId: string) => {
+    return get().jobs[messageId];
   },
 }));

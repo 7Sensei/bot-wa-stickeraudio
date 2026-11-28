@@ -90,30 +90,33 @@ export class WhatsAppView {
 
   /**
    * Berlangganan (subscribe) ke Zustand Store untuk stiker dan audio.
-   * Merender balasan: reaksi ⏳ saat processing, ✅ saat selesai beserta media,
-   * atau pesan error yang ramah dan ❌ saat gagal.
+   * State dikunci per messageId; chatId diambil dari dalam job state untuk pengiriman.
+   * Antrean ffmpeg tetap 1 per 1 (dikelola di MediaQueue).
    */
   private subscribeToStores(): void {
     // 1. Subscribe ke Store Stiker
     stickerStore.subscribe(async (state, prevState) => {
-      const chatId = state.lastUpdatedChatId;
-      if (!chatId || !this.sock) return;
+      const messageId = state.lastUpdatedMessageId;
+      if (!messageId || !this.sock) return;
 
-      const current = state.chats[chatId];
-      const prev = prevState?.chats?.[chatId];
+      const current = state.jobs[messageId];
+      const prev = prevState?.jobs?.[messageId];
 
       if (!current) return;
 
+      // Ambil chatId dari dalam job state (bukan dari kunci store)
+      const { chatId } = current;
+
       // Status berubah ke 'processing'
       if (current.status === 'processing' && prev?.status !== 'processing') {
-        await this.sendReaction(chatId, current.messageId, '⏳');
+        await this.sendReaction(chatId, messageId, '⏳');
       }
 
       // Status berubah ke 'done'
       else if (current.status === 'done' && prev?.status !== 'done' && current.result) {
         try {
           if (current.audio) {
-            const quoted = this.quotedFor(chatId, current.messageId);
+            const quoted = this.quotedFor(chatId, messageId);
 
             try {
               // Coba kirim stiker bersuara dengan quoted jika ada
@@ -127,7 +130,7 @@ export class WhatsAppView {
               } catch (quotedErr) {
                 if (quoted) {
                   logger.warn(
-                    { err: quotedErr, chatId },
+                    { err: quotedErr, chatId, messageId },
                     'Gagal mengirim stiker bersuara dengan quoted, mencoba tanpa quoted'
                   );
                   await sendSoundSticker(this.sock, chatId, {
@@ -142,18 +145,18 @@ export class WhatsAppView {
               }
             } catch (soundError) {
               logger.error(
-                { err: soundError, chatId },
+                { err: soundError, chatId, messageId },
                 'Gagal mengirim stiker bersuara, fallback ke stiker biasa'
               );
               await this.sendMessageWithQuotedFallback(
                 chatId,
                 { sticker: current.result },
-                current.messageId
+                messageId
               );
               await this.sendMessageWithQuotedFallback(
                 chatId,
                 { text: '⚠️ Gagal mengirim stiker bersuara, stiker dikirim dalam format biasa.' },
-                current.messageId
+                messageId
               );
             }
           } else {
@@ -161,7 +164,7 @@ export class WhatsAppView {
             await this.sendMessageWithQuotedFallback(
               chatId,
               { sticker: current.result },
-              current.messageId
+              messageId
             );
           }
 
@@ -170,16 +173,16 @@ export class WhatsAppView {
             await this.sendMessageWithQuotedFallback(
               chatId,
               { text: current.notice },
-              current.messageId
+              messageId
             );
           }
 
-          await this.sendReaction(chatId, current.messageId, '✅');
+          await this.sendReaction(chatId, messageId, '✅');
         } catch (error) {
-          logger.error({ err: error, chatId }, 'Gagal mengirim stiker ke WhatsApp');
+          logger.error({ err: error, chatId, messageId }, 'Gagal mengirim stiker ke WhatsApp');
         } finally {
-          this.forgetMessage(chatId, current.messageId);
-          stickerStore.getState().reset(chatId);
+          this.forgetMessage(chatId, messageId);
+          stickerStore.getState().reset(messageId);
         }
       }
 
@@ -189,31 +192,34 @@ export class WhatsAppView {
           await this.sendMessageWithQuotedFallback(
             chatId,
             { text: current.error },
-            current.messageId
+            messageId
           );
-          await this.sendReaction(chatId, current.messageId, '❌');
+          await this.sendReaction(chatId, messageId, '❌');
         } catch (error) {
-          logger.error({ err: error, chatId }, 'Gagal mengirim pesan error stiker');
+          logger.error({ err: error, chatId, messageId }, 'Gagal mengirim pesan error stiker');
         } finally {
-          this.forgetMessage(chatId, current.messageId);
-          stickerStore.getState().reset(chatId);
+          this.forgetMessage(chatId, messageId);
+          stickerStore.getState().reset(messageId);
         }
       }
     });
 
     // 2. Subscribe ke Store Audio
     audioStore.subscribe(async (state, prevState) => {
-      const chatId = state.lastUpdatedChatId;
-      if (!chatId || !this.sock) return;
+      const messageId = state.lastUpdatedMessageId;
+      if (!messageId || !this.sock) return;
 
-      const current = state.chats[chatId];
-      const prev = prevState?.chats?.[chatId];
+      const current = state.jobs[messageId];
+      const prev = prevState?.jobs?.[messageId];
 
       if (!current) return;
 
+      // Ambil chatId dari dalam job state (bukan dari kunci store)
+      const { chatId } = current;
+
       // Status berubah ke 'processing'
       if (current.status === 'processing' && prev?.status !== 'processing') {
-        await this.sendReaction(chatId, current.messageId, '⏳');
+        await this.sendReaction(chatId, messageId, '⏳');
       }
 
       // Status berubah ke 'done'
@@ -227,7 +233,7 @@ export class WhatsAppView {
                 mimetype: 'audio/ogg; codecs=opus',
                 ptt: true,
               },
-              current.messageId
+              messageId
             );
           } else {
             await this.sendMessageWithQuotedFallback(
@@ -237,15 +243,15 @@ export class WhatsAppView {
                 mimetype: 'audio/mp4',
                 ptt: false,
               },
-              current.messageId
+              messageId
             );
           }
-          await this.sendReaction(chatId, current.messageId, '✅');
+          await this.sendReaction(chatId, messageId, '✅');
         } catch (error) {
-          logger.error({ err: error, chatId }, 'Gagal mengirim audio ke WhatsApp');
+          logger.error({ err: error, chatId, messageId }, 'Gagal mengirim audio ke WhatsApp');
         } finally {
-          this.forgetMessage(chatId, current.messageId);
-          audioStore.getState().reset(chatId);
+          this.forgetMessage(chatId, messageId);
+          audioStore.getState().reset(messageId);
         }
       }
 
@@ -255,14 +261,14 @@ export class WhatsAppView {
           await this.sendMessageWithQuotedFallback(
             chatId,
             { text: current.error },
-            current.messageId
+            messageId
           );
-          await this.sendReaction(chatId, current.messageId, '❌');
+          await this.sendReaction(chatId, messageId, '❌');
         } catch (error) {
-          logger.error({ err: error, chatId }, 'Gagal mengirim pesan error audio');
+          logger.error({ err: error, chatId, messageId }, 'Gagal mengirim pesan error audio');
         } finally {
-          this.forgetMessage(chatId, current.messageId);
-          audioStore.getState().reset(chatId);
+          this.forgetMessage(chatId, messageId);
+          audioStore.getState().reset(messageId);
         }
       }
     });

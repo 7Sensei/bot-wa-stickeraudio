@@ -8,8 +8,8 @@ import type { ParsedCommand } from '../utils/message-extractor.js';
 export class AudioViewModel {
   /**
    * Menangani perintah .audio (konversi ke MP3) dan .vn (konversi ke Voice Note OGG Opus)
-   * Melakukan validasi input, memanggil Model, dan memperbarui Zustand store.
-   * Tidak memanggil Baileys secara langsung.
+   * State dikunci per messageId sehingga banyak perintah dari chat/grup yang sama
+   * tidak saling menimpa. Balasan tetap dikirim ke chatId yang benar via store.
    */
   async handleAudio(context: ParsedCommand, isVoiceNote: boolean): Promise<void> {
     const { chatId, senderId, messageId, media } = context;
@@ -18,7 +18,7 @@ export class AudioViewModel {
     if (!media) {
       audioStore.getState().setProcessing(chatId, senderId, messageId, isVoiceNote);
       audioStore.getState().setError(
-        chatId,
+        messageId,
         isVoiceNote
           ? '⚠️ Kirim audio/video atau balas pesan audio dengan perintah *.vn* untuk mengubahnya ke Voice Note!'
           : '⚠️ Kirim video atau balas video dengan perintah *.audio* untuk mengubahnya menjadi MP3!'
@@ -34,7 +34,7 @@ export class AudioViewModel {
     if (!isAudio && !isVideo) {
       audioStore.getState().setProcessing(chatId, senderId, messageId, isVoiceNote);
       audioStore.getState().setError(
-        chatId,
+        messageId,
         '⚠️ Format media tidak didukung! Harap kirim atau balas file video atau audio.'
       );
       return;
@@ -45,19 +45,19 @@ export class AudioViewModel {
     if (media.fileLength && media.fileLength > maxAllowedMB * 1024 * 1024) {
       audioStore.getState().setProcessing(chatId, senderId, messageId, isVoiceNote);
       audioStore.getState().setError(
-        chatId,
+        messageId,
         `⚠️ Ukuran file terlalu besar! Maksimal ukuran yang diizinkan adalah ${maxAllowedMB}MB.`
       );
       return;
     }
 
-    // 4. Update store ke status processing
+    // 4. Update store ke status processing (kunci: messageId)
     audioStore.getState().setProcessing(chatId, senderId, messageId, isVoiceNote);
 
     // 5. Masukkan tugas ke antrean media tunggal
     mediaQueue.enqueue(async () => {
       try {
-        logger.info({ chatId, isVoiceNote }, 'Mulai mendownload dan memproses audio...');
+        logger.info({ chatId, messageId, isVoiceNote }, 'Mulai mendownload dan memproses audio...');
         const mediaBuffer = await media.download();
 
         let resultBuffer: Buffer;
@@ -67,13 +67,13 @@ export class AudioViewModel {
           resultBuffer = await videoToMp3(mediaBuffer);
         }
 
-        // 6. Update store ke status done
-        audioStore.getState().setDone(chatId, resultBuffer);
-        logger.info({ chatId, isVoiceNote }, 'Berhasil memproses audio');
+        // 6. Update store ke status done (kunci: messageId)
+        audioStore.getState().setDone(messageId, resultBuffer);
+        logger.info({ chatId, messageId, isVoiceNote }, 'Berhasil memproses audio');
       } catch (error: any) {
-        logger.error({ err: error, chatId }, 'Gagal memproses konversi audio');
+        logger.error({ err: error, chatId, messageId }, 'Gagal memproses konversi audio');
         audioStore.getState().setError(
-          chatId,
+          messageId,
           '❌ Terjadi kesalahan saat memproses audio. Pastikan file media tidak rusak.'
         );
       }

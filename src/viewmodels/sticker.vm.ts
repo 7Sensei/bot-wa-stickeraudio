@@ -8,8 +8,8 @@ import type { ParsedCommand } from '../utils/message-extractor.js';
 export class StickerViewModel {
   /**
    * Menangani perintah .s atau .stiker
-   * Melakukan validasi input, memanggil Model, dan memperbarui Zustand store.
-   * Tidak memanggil Baileys secara langsung.
+   * State dikunci per messageId sehingga banyak perintah dari chat/grup yang sama
+   * tidak saling menimpa. Balasan tetap dikirim ke chatId yang benar via store.
    */
   async handleSticker(context: ParsedCommand): Promise<void> {
     const { chatId, senderId, messageId, media, args } = context;
@@ -18,7 +18,7 @@ export class StickerViewModel {
     if (!media) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         '⚠️ Kirim gambar/video/GIF dengan caption *.s* atau balas (reply) media tersebut dengan *.s*!'
       );
       return;
@@ -32,7 +32,7 @@ export class StickerViewModel {
     if (!isImage && !isVideo) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         '⚠️ Format media tidak didukung! Harap gunakan file gambar (JPG/PNG) atau video/GIF.'
       );
       return;
@@ -42,7 +42,7 @@ export class StickerViewModel {
     if (isVideo && media.seconds && media.seconds > config.maxStickerVideoDurationSec) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         `⚠️ Durasi video terlalu panjang (${media.seconds} detik)! Maksimal ${config.maxStickerVideoDurationSec} detik untuk stiker bergerak.`
       );
       return;
@@ -53,7 +53,7 @@ export class StickerViewModel {
     if (media.fileLength && media.fileLength > maxAllowedMB * 1024 * 1024) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         `⚠️ Ukuran file terlalu besar! Maksimal ukuran yang diizinkan adalah ${maxAllowedMB}MB.`
       );
       return;
@@ -73,13 +73,13 @@ export class StickerViewModel {
       }
     }
 
-    // 6. Update store ke status processing
+    // 6. Update store ke status processing (kunci: messageId)
     stickerStore.getState().setProcessing(chatId, senderId, messageId);
 
     // 7. Masukkan tugas ke antrean media tunggal (mencegah Termux OOM)
     mediaQueue.enqueue(async () => {
       try {
-        logger.info({ chatId, isVideo }, 'Mulai mendownload dan memproses stiker...');
+        logger.info({ chatId, messageId, isVideo }, 'Mulai mendownload dan memproses stiker...');
         const mediaBuffer = await media.download();
 
         let resultBuffer: Buffer;
@@ -89,18 +89,18 @@ export class StickerViewModel {
           resultBuffer = await imageToSticker(mediaBuffer, { packName, authorName });
         }
 
-        // 8. Update store ke status done
-        stickerStore.getState().setDone(chatId, resultBuffer);
-        logger.info({ chatId }, 'Berhasil membuat stiker');
+        // 8. Update store ke status done (kunci: messageId)
+        stickerStore.getState().setDone(messageId, resultBuffer);
+        logger.info({ chatId, messageId }, 'Berhasil membuat stiker');
       } catch (error: any) {
-        logger.error({ err: error, chatId }, 'Gagal memproses stiker');
+        logger.error({ err: error, chatId, messageId }, 'Gagal memproses stiker');
 
         let friendlyMsg = '❌ Terjadi kesalahan saat membuat stiker. Pastikan format media valid dan coba lagi.';
         if (error?.message?.includes('melebihi batas 1MB')) {
           friendlyMsg = '⚠️ Ukuran stiker animasi melebihi batas 1MB WhatsApp. Silakan gunakan video dengan durasi lebih singkat.';
         }
 
-        stickerStore.getState().setError(chatId, friendlyMsg);
+        stickerStore.getState().setError(messageId, friendlyMsg);
       }
     });
   }
@@ -117,7 +117,7 @@ export class StickerViewModel {
     if (!media) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         '⚠️ Kirim video/GIF dengan caption *.som* atau balas (reply) video tersebut dengan *.som*!'
       );
       return;
@@ -130,7 +130,7 @@ export class StickerViewModel {
     if (!isVideo) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         '⚠️ Fitur stiker bersuara hanya mendukung video atau GIF bersuara, bukan gambar diam.'
       );
       return;
@@ -140,7 +140,7 @@ export class StickerViewModel {
     if (media.seconds && media.seconds > config.maxStickerVideoDurationSec) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         `⚠️ Durasi video terlalu panjang (${media.seconds} detik)! Maksimal ${config.maxStickerVideoDurationSec} detik untuk stiker bersuara.`
       );
       return;
@@ -150,7 +150,7 @@ export class StickerViewModel {
     if (media.fileLength && media.fileLength > config.maxVideoSizeMB * 1024 * 1024) {
       stickerStore.getState().setProcessing(chatId, senderId, messageId);
       stickerStore.getState().setError(
-        chatId,
+        messageId,
         `⚠️ Ukuran file terlalu besar! Maksimal ukuran yang diizinkan adalah ${config.maxVideoSizeMB}MB.`
       );
       return;
@@ -170,51 +170,51 @@ export class StickerViewModel {
       }
     }
 
-    // 6. Update store ke status processing
+    // 6. Update store ke status processing (kunci: messageId)
     stickerStore.getState().setProcessing(chatId, senderId, messageId);
 
     // 7. Masukkan tugas ke antrean media tunggal
     mediaQueue.enqueue(async () => {
       try {
-        logger.info({ chatId }, 'Mulai mendownload dan memproses stiker bersuara...');
+        logger.info({ chatId, messageId }, 'Mulai mendownload dan memproses stiker bersuara...');
         const mediaBuffer = await media.download();
 
         try {
           const soundResult = await videoToSoundSticker(mediaBuffer, { packName, authorName });
 
           if (soundResult.hasAudio && soundResult.audio) {
-            stickerStore.getState().setDone(chatId, soundResult.sticker, {
+            stickerStore.getState().setDone(messageId, soundResult.sticker, {
               audio: soundResult.audio,
               durationMs: soundResult.durationMs,
             });
-            logger.info({ chatId }, 'Berhasil membuat stiker bersuara');
+            logger.info({ chatId, messageId }, 'Berhasil membuat stiker bersuara');
           } else {
             // Video tidak punya stream audio atau audio senyap -> fallback ke stiker biasa
-            stickerStore.getState().setDone(chatId, soundResult.sticker, {
+            stickerStore.getState().setDone(messageId, soundResult.sticker, {
               audio: null,
               durationMs: soundResult.durationMs,
               notice: 'ℹ️ Video tidak memiliki suara atau suara terlalu senyap, dikirim sebagai stiker biasa.',
             });
-            logger.info({ chatId }, 'Stiker dibuat tanpa audio (suara senyap/tidak ada)');
+            logger.info({ chatId, messageId }, 'Stiker dibuat tanpa audio (suara senyap/tidak ada)');
           }
         } catch (soundError) {
-          logger.warn({ soundError, chatId }, 'Gagal membuat stiker bersuara, mencoba fallback ke stiker animasi biasa');
+          logger.warn({ soundError, chatId, messageId }, 'Gagal membuat stiker bersuara, mencoba fallback ke stiker animasi biasa');
           const fallbackSticker = await videoToSticker(mediaBuffer, { packName, authorName });
-          stickerStore.getState().setDone(chatId, fallbackSticker, {
+          stickerStore.getState().setDone(messageId, fallbackSticker, {
             audio: null,
             durationMs: 0,
             notice: 'ℹ️ Gagal membuat stiker bersuara, dikirim sebagai stiker animasi biasa.',
           });
         }
       } catch (error: any) {
-        logger.error({ err: error, chatId }, 'Gagal memproses stiker bersuara');
+        logger.error({ err: error, chatId, messageId }, 'Gagal memproses stiker bersuara');
 
         let friendlyMsg = '❌ Terjadi kesalahan saat membuat stiker bersuara. Pastikan format media valid dan coba lagi.';
         if (error?.message?.includes('500 KB') || error?.message?.includes('1MB')) {
           friendlyMsg = '⚠️ Ukuran stiker melebihi batas WhatsApp. Silakan gunakan video dengan durasi lebih singkat.';
         }
 
-        stickerStore.getState().setError(chatId, friendlyMsg);
+        stickerStore.getState().setError(messageId, friendlyMsg);
       }
     });
   }
